@@ -318,6 +318,59 @@ pub fn hook<'s, 'h: 's, T: Serialize + ?Sized, H: Hooks>(
     SerializableWithContext::new(serializable, hooks)
 }
 
+/// Attach serialization hooks to an owned serializable value.
+///
+/// This function is similar to [`hook`] but takes ownership of both the value
+/// and the hooks, returning a `'static` serializable. This is useful when you
+/// need to serialize a value with hooks in a context that requires `'static` lifetime,
+/// such as when using `surrealdb::value::to_value()`.
+///
+/// # Example:
+/// ```
+/// use serde::Serialize;
+/// use serde_hooks::{ser, Path};
+///
+/// #[derive(Serialize, Clone)]
+/// struct User {
+///     full_name: String,
+///     password: String,
+/// }
+///
+/// #[derive(Clone)]
+/// struct UserHooks {
+///     hide_passwords: bool,
+/// };
+///
+/// impl ser::Hooks for UserHooks {
+///     fn on_struct(&self, _path: &Path, st: &mut ser::StructScope) {
+///         st.rename_all_fields_case("SCREAMING_SNAKE_CASE");
+///         if self.hide_passwords {
+///             st.skip_field("password");
+///         }
+///     }
+/// }
+///
+/// let user = User {
+///     full_name: "John Doe".into(),
+///     password: "AKJHDKSHD".into(),
+/// };
+/// let json = serde_json::to_string(&ser::hook_owned(
+///     user,
+///     UserHooks {
+///         hide_passwords: true,
+///     },
+/// ))
+/// .unwrap();
+///
+/// assert_eq!(json, r#"{"FULL_NAME":"John Doe"}"#);
+/// ```
+pub fn hook_owned<T: Serialize + 'static, H: Hooks + 'static>(
+    serializable: T,
+    hooks: H,
+) -> impl Serialize + 'static {
+    SerializableWithContext::<T, H>::new_owned(Box::new(serializable), hooks)
+}
+
 /// Invoke hooks on a serializable value.
 ///
 /// Internally this function attaches the passed in hooks and performs serialization of

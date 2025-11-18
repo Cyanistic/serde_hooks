@@ -97,6 +97,10 @@ impl<'h, S: Serializer, H: SerializerWrapperHooks> Serializer for SerializerWrap
 
     value_serialize!(serialize_unit_struct, UnitStruct, name: &'static str);
 
+    fn is_human_readable(&self) -> bool {
+        self.serializer.is_human_readable()
+    }
+
     fn serialize_unit_variant(
         self,
         name: &'static str,
